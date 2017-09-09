@@ -151,6 +151,11 @@ glusterd_svcs_manager (glusterd_volinfo_t *volinfo)
                                        PROC_START_NO_WAIT);
         if (ret == -EINVAL)
                 ret = 0;
+
+        ret = conf->vscand_svc.manager (&(conf->vscand_svc), NULL,
+                                       PROC_START_NO_WAIT);
+        if (ret == -EINVAL)
+                ret = 0;
 out:
         return ret;
 }

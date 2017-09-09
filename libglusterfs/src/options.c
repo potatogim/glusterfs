@@ -885,6 +885,10 @@ xlator_volume_option_get_list (volume_opt_list_t *vol_list, const char *key)
                 opt = vol_list->given_opt;
 
         for (index = 0; opt[index].key[0]; index++) {
+                gf_msg ("TEST", GF_LOG_WARNING, 0,
+                        LG_MSG_PG_DEBUG,
+                        "opt[index].key[0]: %s", opt[index].key[0]);
+
                 for (i = 0; i < ZR_VOLUME_MAX_NUM_KEY; i++) {
                         cmp_key = opt[index].key[i];
                         if (!cmp_key)
@@ -905,6 +909,10 @@ xlator_volume_option_get (xlator_t *xl, const char *key)
 {
         volume_opt_list_t       *vol_list = NULL;
         volume_option_t         *found = NULL;
+
+        gf_msg (xl->name, GF_LOG_WARNING, 0,
+                LG_MSG_PG_DEBUG,
+                "xl->name: %s, key: %s", xl->name, key);
 
         list_for_each_entry (vol_list, &xl->volume_options, list) {
                 found = xlator_volume_option_get_list (vol_list, key);

@@ -4400,6 +4400,7 @@ glusterd_op_build_payload (dict_t **req, char **op_errstr, dict_t *op_ctx)
                 case GD_OP_SCRUB_STATUS:
                 case GD_OP_SCRUB_ONDEMAND:
                 case GD_OP_RESET_BRICK:
+                case GD_OP_VSCAN:
                         {
                                 do_common = _gf_true;
                         }
@@ -5998,6 +5999,12 @@ glusterd_op_stage_validate (glusterd_op_t op, dict_t *dict, char **op_errstr,
                         ret = glusterd_op_stage_bitrot (dict, op_errstr,
                                                         rsp_dict);
                         break;
+                case GD_OP_VSCAN:
+                        /* :TODO 02/28/2018 01:15:15 AM by Ji-Hyeon Gim:
+                         * operation staging */
+                        ret = glusterd_op_stage_vscan (dict, op_errstr,
+                                                        rsp_dict);
+                        break;
 
                 default:
                         gf_msg (this->name, GF_LOG_ERROR, 0,
@@ -6137,6 +6144,10 @@ glusterd_op_commit_perform (glusterd_op_t op, dict_t *dict, char **op_errstr,
                 case GD_OP_SCRUB_STATUS:
                 case GD_OP_SCRUB_ONDEMAND:
                         ret = glusterd_op_bitrot (dict, op_errstr, rsp_dict);
+                        break;
+
+                case GD_OP_VSCAN:
+                        ret = glusterd_op_vscan (dict, op_errstr, rsp_dict);
                         break;
 
                 default:

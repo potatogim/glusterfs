@@ -42,6 +42,7 @@
 #include "glusterd-scrub-svc.h"
 #include "glusterd-quotad-svc.h"
 #include "glusterd-snapd-svc.h"
+#include "glusterd-vscand-svc.h"
 #include "glusterd-messages.h"
 #include "common-utils.h"
 #include "glusterd-geo-rep.h"
@@ -1358,6 +1359,9 @@ glusterd_svcs_build ()
 
         priv->scrub_svc.build = glusterd_scrubsvc_build;
         priv->scrub_svc.build (&(priv->scrub_svc));
+
+        priv->vscand_svc.build = glusterd_vscandsvc_build;
+        priv->vscand_svc.build (&(priv->vscand_svc));
 }
 
 static int
@@ -1490,7 +1494,6 @@ init (xlator_t *this)
                 exit (1);
         }
 
-
         if ((-1 == ret) && (ENOENT == errno)) {
                 ret = mkdir_p (workdir, 0777, _gf_true);
 
@@ -1585,6 +1588,15 @@ init (xlator_t *this)
                 gf_msg (this->name, GF_LOG_CRITICAL, 0,
                         GD_MSG_CREATE_DIR_FAILED, "Unable to create "
                         "quota running directory");
+                exit (1);
+        }
+
+        ret = glusterd_init_var_run_dirs (this, rundir,
+                                          GLUSTERD_VSCAND_RUN_DIR);
+        if (ret) {
+                gf_msg (this->name, GF_LOG_CRITICAL, 0,
+                        GD_MSG_CREATE_DIR_FAILED, "Unable to create "
+                        "vscan running directory");
                 exit (1);
         }
 
@@ -1704,6 +1716,16 @@ init (xlator_t *this)
                 gf_msg (this->name, GF_LOG_CRITICAL, errno,
                         GD_MSG_CREATE_DIR_FAILED,
                         "Unable to create quotad directory %s"
+                        " ,errno = %d", storedir, errno);
+                exit (1);
+        }
+
+        snprintf (storedir, PATH_MAX, "%s/vscand", workdir);
+        ret = sys_mkdir (storedir, 0777);
+        if ((-1 == ret) && (errno != EEXIST)) {
+                gf_msg (this->name, GF_LOG_CRITICAL, errno,
+                        GD_MSG_CREATE_DIR_FAILED,
+                        "Unable to create vscand directory %s"
                         " ,errno = %d", storedir, errno);
                 exit (1);
         }
@@ -1983,9 +2005,6 @@ out:
 
         return ret;
 }
-
-
-
 
 /*
  * fini - finish function for glusterd, called before

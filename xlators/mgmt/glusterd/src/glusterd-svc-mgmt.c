@@ -182,6 +182,16 @@ glusterd_svc_start (glusterd_svc_t *svc, int flags, dict_t *cmdline)
                 runner_argprintf (&runner, "--log-file=%s", valgrind_logfile);
         }
 
+        gf_msg(this->name, GF_LOG_INFO, 0,
+               GD_MSG_PG_DEBUG,
+               "%s -s %s --volfile-id %s -p %s -l %s -S %s",
+               SBIN_DIR"/glusterfs",
+               svc->proc.volfileserver,
+               svc->proc.volfileid,
+               svc->proc.pidfile,
+               svc->proc.logfile,
+               svc->conn.sockpath);
+
         runner_add_args (&runner, SBIN_DIR"/glusterfs",
                          "-s", svc->proc.volfileserver,
                          "--volfile-id", svc->proc.volfileid,

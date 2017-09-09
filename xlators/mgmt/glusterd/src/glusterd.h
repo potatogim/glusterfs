@@ -131,6 +131,7 @@ typedef enum glusterd_op_ {
         GD_OP_DETACH_TIER_STATUS,
         GD_OP_DETACH_NOT_STARTED,
         GD_OP_REMOVE_TIER_BRICK,
+        GD_OP_VSCAN,
         GD_OP_MAX,
 } glusterd_op_t;
 
@@ -155,6 +156,7 @@ typedef struct {
         glusterd_svc_t           bitd_svc;
         glusterd_svc_t           scrub_svc;
         glusterd_svc_t           quotad_svc;
+        glusterd_svc_t           vscand_svc;
         struct pmap_registry    *pmap;
         struct cds_list_head     volumes;
         struct cds_list_head     snapshots; /*List of snap volumes */
@@ -569,6 +571,7 @@ typedef enum {
 #define GLUSTERD_GLUSTERSHD_RUN_DIR          "/glustershd"
 #define GLUSTERD_NFS_RUN_DIR                 "/nfs"
 #define GLUSTERD_QUOTAD_RUN_DIR              "/quotad"
+#define GLUSTERD_VSCAND_RUN_DIR              "/vscand"
 #define GLUSTER_SHARED_STORAGE_BRICK_DIR     GLUSTERD_DEFAULT_WORKDIR"/ss_brick"
 #define GLUSTERD_VAR_RUN_DIR                 "/var/run"
 #define GLUSTERD_RUN_DIR                     "/run"
@@ -652,6 +655,9 @@ do {                                                                       \
                   DEFAULT_VAR_RUN_DIRECTORY"/%s_quota_list%s", volname, path);\
         } while (0)
 
+#define GLUSTERD_GET_VSCAND_DIR(path, priv) \
+        snprintf (path, PATH_MAX, "%s/vscand", priv->workdir);
+
 #define GLUSTERD_GET_TMP_PATH(abspath, path) do {                       \
         snprintf (abspath, sizeof (abspath)-1,                          \
                   DEFAULT_VAR_RUN_DIRECTORY"/tmp%s", path);             \
@@ -696,6 +702,11 @@ do {                                                                       \
                         snprintf (piddir, PATH_MAX, "%s/run/quota/disable",   \
                                   _volpath);                                  \
         } while (0)
+
+#define GLUSTERD_GET_VSCAND_PIDFILE(pidfile, vscandpath, priv) {         \
+                snprintf (pidfile, PATH_MAX, "%s/vscand/vscand.pid",     \
+                           priv->rundir);                                \
+        }
 
 #define GLUSTERD_STACK_DESTROY(frame) do {\
                 frame->local = NULL;                                    \
@@ -1023,6 +1034,9 @@ int
 glusterd_handle_bitrot (rpcsvc_request_t *req);
 
 int
+glusterd_handle_vscan (rpcsvc_request_t *req);
+
+int
 glusterd_handle_fsm_log (rpcsvc_request_t *req);
 
 int
@@ -1126,9 +1140,13 @@ int glusterd_op_quota (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
 
 int glusterd_op_bitrot (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
 
+int glusterd_op_vscan (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
+
 int glusterd_op_stage_quota (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
 
 int glusterd_op_stage_bitrot (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
+
+int glusterd_op_stage_vscan (dict_t *dict, char **op_errstr, dict_t *rsp_dict);
 
 int glusterd_op_stage_replace_brick (dict_t *dict, char **op_errstr,
                                      dict_t *rsp_dict);

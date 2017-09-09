@@ -4863,6 +4863,28 @@ glusterd_all_volumes_with_quota_stopped ()
 }
 
 gf_boolean_t
+glusterd_all_volumes_with_vscan_stopped ()
+{
+        glusterd_conf_t                   *priv     = NULL;
+        xlator_t                          *this     = NULL;
+        glusterd_volinfo_t                *voliter  = NULL;
+
+        this = THIS;
+        GF_ASSERT (this);
+        priv = this->private;
+        GF_ASSERT (priv);
+
+        cds_list_for_each_entry (voliter, &priv->volumes, vol_list) {
+                if (!glusterd_is_volume_vscan_enabled (voliter))
+                        continue;
+                if (voliter->status == GLUSTERD_STATUS_STARTED)
+                        return _gf_false;
+        }
+
+        return _gf_true;
+}
+
+gf_boolean_t
 glusterd_have_volumes ()
 {
         xlator_t        *this = NULL;
@@ -11504,6 +11526,12 @@ int
 glusterd_is_bitrot_enabled (glusterd_volinfo_t *volinfo)
 {
         return glusterd_volinfo_get_boolean (volinfo, VKEY_FEATURES_BITROT);
+}
+
+int
+glusterd_is_volume_vscan_enabled (glusterd_volinfo_t *volinfo)
+{
+        return (glusterd_volinfo_get_boolean (volinfo, VKEY_FEATURES_VSCAN));
 }
 
 int

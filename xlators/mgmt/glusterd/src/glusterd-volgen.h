@@ -32,6 +32,7 @@
 #define VKEY_FEATURES_TRASH       "features.trash"
 #define VKEY_FEATURES_BITROT      "features.bitrot"
 #define VKEY_FEATURES_SCRUB       "features.scrub"
+#define VKEY_FEATURES_VSCAN       "features.vscan"
 #define VKEY_PARALLEL_READDIR     "performance.parallel-readdir"
 #define VKEY_READDIR_AHEAD        "performance.readdir-ahead"
 #define VKEY_RDA_CACHE_LIMIT      "performance.rda-cache-limit"
@@ -64,6 +65,7 @@ typedef enum {
         GF_REBALANCED = 1,
         GF_QUOTAD,
         GF_SNAPD,
+        GF_VSCAND,
 } glusterd_graph_type_t;
 
 struct volgen_graph {
@@ -216,6 +218,9 @@ build_bitd_graph (volgen_graph_t *graph, dict_t *mod_dict);
 
 int
 build_scrub_graph (volgen_graph_t *graph, dict_t *mod_dict);
+
+int
+build_vscand_graph (volgen_graph_t *graph, dict_t *mod_dict);
 
 int
 glusterd_delete_volfile (glusterd_volinfo_t *volinfo,

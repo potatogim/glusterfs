@@ -618,10 +618,16 @@ int
 glusterd_is_volume_inode_quota_enabled (glusterd_volinfo_t *volinfo);
 
 int
+glusterd_is_volume_vscan_enabled (glusterd_volinfo_t *volinfo);
+
+int
 glusterd_is_bitrot_enabled (glusterd_volinfo_t *volinfo);
 
 gf_boolean_t
 glusterd_all_volumes_with_quota_stopped ();
+
+gf_boolean_t
+glusterd_all_volumes_with_vscan_stopped ();
 
 void
 glusterd_clean_up_quota_store (glusterd_volinfo_t *volinfo);

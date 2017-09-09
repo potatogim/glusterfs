@@ -5718,3 +5718,91 @@ out:
 
         return ret;
 }
+
+int32_t
+cli_cmd_vscan_parse (const char **words, int wordcount, dict_t **options)
+{
+        int32_t            ret        = -1;
+        char               *w         = NULL;
+        char               *volname   = NULL;
+        char               *opwords[] = {"enable",
+                                         "disable",
+                                         NULL};
+        gf_vscan_type      type       = GF_VSCAN_OPTION_TYPE_NONE;
+        dict_t             *dict      = NULL;
+
+        GF_ASSERT (words);
+        GF_ASSERT (options);
+
+        dict = dict_new ();
+        if (!dict)
+                goto out;
+
+        if (wordcount < 4 || wordcount > 5) {
+                gf_log ("cli", GF_LOG_ERROR, "Invalid syntax");
+                goto out;
+        }
+
+        volname = (char *)words[2];
+        if (!volname) {
+                ret = -1;
+                goto out;
+        }
+
+        ret = cli_cmd_validate_volume (volname);
+        if (ret) {
+                gf_log ("cli", GF_LOG_ERROR, "Failed to validate volume name");
+                goto out;
+        }
+
+        ret = dict_set_str (dict, "volname", volname);
+        if (ret) {
+                cli_out ("Failed to set volume name in dictionary ");
+                goto out;
+        }
+
+        w = str_getunamb (words[3], opwords);
+        if (!w) {
+                cli_out ("Invalid vscan option : %s", words[3]);
+                ret = -1;
+                goto out;
+        }
+
+        if (strcmp (w, "enable") == 0) {
+                if (wordcount == 4) {
+                        type = GF_VSCAN_OPTION_TYPE_ENABLE;
+                        ret = 0;
+                        goto set_type;
+                } else {
+                        ret = -1;
+                        goto out;
+                }
+        }
+
+        if (strcmp (w, "disable") == 0) {
+                if (wordcount == 4) {
+                        type = GF_VSCAN_OPTION_TYPE_DISABLE;
+                        ret = 0;
+                        goto set_type;
+                } else {
+                        ret = -1;
+                        goto out;
+                }
+        }
+
+set_type:
+        ret = dict_set_int32 (dict, "type", type);
+        if (ret < 0)
+                goto out;
+
+        *options = dict;
+
+out:
+        if (ret) {
+                gf_log ("cli", GF_LOG_ERROR, "Unable to parse vscan command");
+                if (dict)
+                        dict_unref (dict);
+        }
+
+        return ret;
+}

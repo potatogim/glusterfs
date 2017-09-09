@@ -4853,6 +4853,41 @@
  */
 #define GD_MSG_PIDFILE_UNLINKING                   (GLUSTERD_COMP_BASE + 599)
 
+/*!
+ * @messageid
+ * @diagnosis
+ * @recommendedaction
+ *
+ */
+#define GD_MSG_FAILED_INIT_VSCANSVC                (GLUSTERD_COMP_BASE + 600)
+
+/*!
+ * @messageid
+ * @diagnosis
+ * @recommendedaction
+ *
+ */
+#define GD_MSG_OP_STAGE_VSCAN_FAIL                 (GLUSTERD_COMP_BASE + 601)
+
+/*!
+ * @messageid
+ * @diagnosis
+ * @recommendedaction
+ *
+ */
+#define GD_MSG_VSCAN_ENABLED                       (GLUSTERD_COMP_BASE + 602)
+
+/*!
+ * @messageid
+ * @diagnosis
+ * @recommendedaction
+ *
+ */
+#define GD_MSG_VSCAN_DISABLED                      (GLUSTERD_COMP_BASE + 603)
+
+#define GD_MSG_PG_DEBUG                            (GLUSTERD_COMP_BASE + 604)
+
+
 /*------------*/
 
 #define glfs_msg_end_x GLFS_MSGID_END, "Invalid: End of messages"

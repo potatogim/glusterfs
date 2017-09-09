@@ -133,6 +133,14 @@ volgen_xlator_link (xlator_t *pxl, xlator_t *cxl)
 {
         int ret = 0;
 
+        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                GD_MSG_PG_DEBUG,
+                "pxl->name: %s", pxl->name);
+
+        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                GD_MSG_PG_DEBUG,
+                "cxl->name: %s", cxl->name);
+
         ret = glusterfs_xlator_link (pxl, cxl);
         if (ret == -1) {
                 gf_msg ("glusterd", GF_LOG_ERROR, ENOMEM,
@@ -1541,6 +1549,25 @@ out:
 }
 
 static int
+brick_graph_add_vscan (volgen_graph_t *graph, glusterd_volinfo_t *volinfo,
+                        dict_t *set_dict, glusterd_brickinfo_t *brickinfo)
+{
+        int ret      = -1;
+        xlator_t *xl = NULL;
+
+        xl = volgen_graph_add (graph, "features/vscan", volinfo->volname);
+        if (!xl)
+                goto out;
+
+        ret = xlator_set_option (xl, "brick-path", brickinfo->path);
+        if (ret)
+                goto out;
+
+out:
+        return ret;
+}
+
+static int
 brick_graph_add_decompounder (volgen_graph_t *graph, glusterd_volinfo_t *volinfo,
                         dict_t *set_dict, glusterd_brickinfo_t *brickinfo)
 {
@@ -2458,6 +2485,7 @@ static volgen_brick_xlator_t server_graph_table[] = {
 #endif
         {brick_graph_add_bd, "bd"},
         {brick_graph_add_trash, "trash"},
+        {brick_graph_add_vscan, "vscan"},
         {brick_graph_add_arbiter, "arbiter"},
         {brick_graph_add_posix, "posix"},
 };
@@ -2620,6 +2648,10 @@ static int
 build_server_graph (volgen_graph_t *graph, glusterd_volinfo_t *volinfo,
                     dict_t *mod_dict, glusterd_brickinfo_t *brickinfo)
 {
+        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                GD_MSG_PG_DEBUG,
+                "volinfo: %s", volinfo->volname);
+
         return build_graph_generic (graph, volinfo, mod_dict, brickinfo,
                                     &server_graph_builder);
 }
@@ -3130,7 +3162,19 @@ volgen_link_bricks (volgen_graph_t *graph,
                 goto out;
         volname = volinfo->volname;
 
+        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                GD_MSG_PG_DEBUG,
+                "VOLNAME: %s", volname);
+
+        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                GD_MSG_PG_DEBUG,
+                "xl_type: %s", xl_type);
+
         for (;; trav = trav->prev) {
+                gf_msg (THIS->name, GF_LOG_INFO, 0,
+                        GD_MSG_PG_DEBUG,
+                        "trav->name: %s", trav->name);
+
                 if ((i % sub_count) == 0) {
                         xl = volgen_graph_add_nolink (graph, xl_type,
                                                       xl_namefmt, volname, j);
@@ -3138,6 +3182,11 @@ volgen_link_bricks (volgen_graph_t *graph,
                                 ret = -1;
                                 goto out;
                         }
+
+                        gf_msg (THIS->name, GF_LOG_INFO, 0,
+                                GD_MSG_PG_DEBUG,
+                                "xl_name: %s", xl->name);
+
                         j++;
                 }
 
@@ -5343,6 +5392,112 @@ build_quotad_graph (volgen_graph_t *graph, dict_t *mod_dict)
                         goto out;
                 }
                 ret = xlator_set_option(quotad_xl, skey, voliter->volname);
+                GF_FREE(skey);
+                if (ret)
+                        goto out;
+
+                memset (&cgraph, 0, sizeof (cgraph));
+                ret = volgen_graph_build_clients (&cgraph, voliter, set_dict,
+                                                  NULL);
+                if (ret)
+                        goto out;
+
+                if (voliter->type == GF_CLUSTER_TYPE_TIER)
+                        ret = volume_volgen_graph_build_clusters_tier
+                                                (&cgraph, voliter, _gf_true);
+                else
+                        ret = volume_volgen_graph_build_clusters
+                                                (&cgraph, voliter, _gf_true);
+                if (ret) {
+                        ret = -1;
+                        goto out;
+                }
+
+                if (mod_dict) {
+                        dict_copy (mod_dict, set_dict);
+                        ret = volgen_graph_set_options_generic (&cgraph, set_dict,
+                                                        voliter,
+                                                        basic_option_handler);
+                } else {
+                        ret = volgen_graph_set_options_generic (&cgraph,
+                                                                voliter->dict,
+                                                                voliter,
+                                                                basic_option_handler);
+                }
+                if (ret)
+                        goto out;
+
+                ret = volgen_graph_merge_sub (graph, &cgraph, 1);
+                if (ret)
+                        goto out;
+
+                ret = dict_reset (set_dict);
+                if (ret)
+                        goto out;
+        }
+
+out:
+        if (set_dict)
+                dict_unref (set_dict);
+        return ret;
+}
+
+int
+build_vscand_graph (volgen_graph_t *graph, dict_t *mod_dict)
+{
+        volgen_graph_t     cgraph         = {0};
+        glusterd_volinfo_t *voliter       = NULL;
+        xlator_t           *this          = NULL;
+        glusterd_conf_t    *priv          = NULL;
+        dict_t             *set_dict      = NULL;
+        int                ret            = 0;
+        xlator_t           *vscand_xl     = NULL;
+        char               *skey          = NULL;
+
+        this = THIS;
+        GF_ASSERT (this);
+
+        priv = this->private;
+        GF_ASSERT (priv);
+
+        graph->type = GF_QUOTAD;
+
+        set_dict = dict_new ();
+        if (!set_dict) {
+                ret = -ENOMEM;
+                goto out;
+        }
+
+        vscand_xl = volgen_graph_add_as (graph, "features/vscan", "vscand");
+        if (!vscand_xl) {
+                ret = -1;
+                goto out;
+        }
+
+        cds_list_for_each_entry (voliter, &priv->volumes, vol_list) {
+                if (voliter->status != GLUSTERD_STATUS_STARTED)
+                        continue;
+
+                if (1 != glusterd_is_volume_vscan_enabled (voliter))
+                        continue;
+
+                ret = dict_set_uint32 (set_dict, "trusted-client",
+                                       GF_CLIENT_TRUSTED);
+                if (ret)
+                        goto out;
+
+                dict_copy (voliter->dict, set_dict);
+                if (mod_dict)
+                        dict_copy (mod_dict, set_dict);
+
+                ret = gf_asprintf(&skey, "%s.volume-id", voliter->volname);
+                if (ret == -1) {
+                        gf_msg ("glusterd", GF_LOG_ERROR, ENOMEM,
+                                GD_MSG_NO_MEMORY, "Out of memory");
+                        goto out;
+                }
+
+                ret = xlator_set_option(vscand_xl, skey, voliter->volname);
                 GF_FREE(skey);
                 if (ret)
                         goto out;

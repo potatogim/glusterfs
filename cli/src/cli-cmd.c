@@ -118,8 +118,8 @@ cli_cmd_process (struct cli_state *state, int argc, char **argv)
                 return -1;
         }
 
-	if ( strcmp (word->word,"help")==0 )
-		goto callback;
+        if ( strcmp (word->word,"help")==0 )
+                goto callback;
 
         state->await_connected = cli_cmd_needs_connection (word);
 

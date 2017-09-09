@@ -3242,6 +3242,25 @@ struct volopt_map_entry glusterd_volopt_map[] = {
           .op_version  = GD_OP_VERSION_3_10_0,
           .validate_fn = validate_boolean
         },
+
+        /* vscan options */
+        { .key         = VKEY_FEATURES_VSCAN,
+          .voltype     = "features/vscan",
+          .option      = "vscan",
+          .value       = "off",
+          .type        = DOC,
+          .flags       = OPT_FLAG_FORCE,
+          .op_version  = GD_OP_VERSION_3_10_0,
+          .validate_fn = validate_boolean,
+        },
+        { .key        = "features.vscan-engine",
+          .voltype    = "features/vscan",
+          .value      = "clamav",
+          .option     = "engine",
+          .op_version = GD_OP_VERSION_3_10_0,
+          .type       = DOC,
+        },
+
         { .key         = NULL
         }
 };

@@ -1836,6 +1836,57 @@ out:
 }
 
 int
+cli_cmd_vscan_cbk (struct cli_state *state, struct cli_cmd_word *word,
+                    const char **words, int wordcount)
+{
+
+        int                     ret         = -1;
+        int                     parse_err   = 0;
+        call_frame_t           *frame       = NULL;
+        dict_t                 *options     = NULL;
+        cli_local_t            *local       = NULL;
+        rpc_clnt_procedure_t   *proc        = NULL;
+        int                     sent        = 0;
+
+        ret = cli_cmd_vscan_parse (words, wordcount, &options);
+        if (ret < 0) {
+                cli_usage_out (word->pattern);
+                parse_err = 1;
+                goto out;
+        }
+
+        frame = create_frame (THIS, THIS->ctx->pool);
+        if (!frame) {
+                ret = -1;
+                goto out;
+        }
+
+        proc = &cli_rpc_prog->proctable[GLUSTER_CLI_VSCAN];
+        if (proc == NULL) {
+                ret = -1;
+                goto out;
+        }
+
+        CLI_LOCAL_INIT (local, words, frame, options);
+
+        if (proc->fn) {
+                ret = proc->fn (frame, THIS, options);
+        }
+
+out:
+        if (ret) {
+                cli_cmd_sent_status_get (&sent);
+                if ((sent == 0) && (parse_err == 0))
+                    cli_err ("vscan command failed. Please check the cli "
+                             "logs for more details");
+        }
+
+        CLI_STACK_DESTROY (frame);
+
+        return ret;
+}
+
+int
 cli_cmd_quota_cbk (struct cli_state *state, struct cli_cmd_word *word,
                    const char **words, int wordcount)
 {
@@ -3331,6 +3382,12 @@ struct cli_cmd volume_cmds[] = {
           cli_cmd_volume_reset_brick_cbk,
           "reset-brick operations"},
 
+        {"volume vscan <VOLNAME> {enable|disable} |\n"
+         "volume vscan <VOLNAME> type {clamav|kaspersky|fprot|f-secure}",
+         cli_cmd_vscan_cbk,
+         "vscan translator specific operation."
+        },
+
         { NULL, NULL, NULL }
 };
 
@@ -3362,7 +3419,6 @@ cli_cmd_volume_register (struct cli_state *state)
         struct cli_cmd *cmd = NULL;
 
         for (cmd = volume_cmds; cmd->pattern; cmd++) {
-
                 ret = cli_cmd_register (&state->tree, cmd);
                 if (ret)
                         goto out;

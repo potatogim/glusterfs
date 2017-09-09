@@ -1793,6 +1793,8 @@
  */
 /*------------*/
 
+#define LG_MSG_PG_DEBUG                                  (GLFS_LG_BASE + 210)
+
 #define glfs_msg_end_lg GLFS_LG_MSGID_END, "Invalid: End of messages"
 
 #endif /* !_LG_MESSAGES_H_ */

@@ -13,8 +13,8 @@
 #endif
 %#include "compat.h"
 
- enum gf_cli_defrag_type {
-	GF_DEFRAG_CMD_NONE = 0,
+enum gf_cli_defrag_type {
+        GF_DEFRAG_CMD_NONE = 0,
         GF_DEFRAG_CMD_START,
         GF_DEFRAG_CMD_STOP,
         GF_DEFRAG_CMD_STATUS,
@@ -35,7 +35,7 @@
         GF_DEFRAG_CMD_TYPE_MAX
 };
 
- enum gf_defrag_status_t {
+enum gf_defrag_status_t {
         GF_DEFRAG_STATUS_NOT_STARTED,
         GF_DEFRAG_STATUS_STARTED,
         GF_DEFRAG_STATUS_STOPPED,
@@ -71,7 +71,14 @@ enum gf_bitrot_type {
         GF_BITROT_OPTION_TYPE_MAX
 };
 
- enum gf1_op_commands {
+enum gf_vscan_type {
+        GF_VSCAN_OPTION_TYPE_NONE = 0,
+        GF_VSCAN_OPTION_TYPE_ENABLE,
+        GF_VSCAN_OPTION_TYPE_DISABLE,
+        GF_VSCAN_OPTION_TYPE_MAX
+};
+
+enum gf1_op_commands {
         GF_OP_CMD_NONE = 0,
         GF_OP_CMD_START,
         GF_OP_CMD_COMMIT,
@@ -168,24 +175,25 @@ enum gf1_cli_top_op {
    bit-wise operations which reduces complexity */
 enum gf_cli_status_type {
         GF_CLI_STATUS_NONE         = 0x000000,
-        GF_CLI_STATUS_MEM          = 0x000001,    /*000000000000001*/
-        GF_CLI_STATUS_CLIENTS      = 0x000002,    /*000000000000010*/
-        GF_CLI_STATUS_INODE        = 0x000004,    /*000000000000100*/
-        GF_CLI_STATUS_FD           = 0x000008,    /*000000000001000*/
-        GF_CLI_STATUS_CALLPOOL     = 0x000010,    /*000000000010000*/
-        GF_CLI_STATUS_DETAIL       = 0x000020,    /*000000000100000*/
-        GF_CLI_STATUS_TASKS        = 0x000040,    /*00000001000000*/
-        GF_CLI_STATUS_MASK         = 0x0000FF,    /*000000011111111 Used to get the op*/
-        GF_CLI_STATUS_VOL          = 0x000100,    /*00000000100000000*/
-        GF_CLI_STATUS_ALL          = 0x000200,    /*00000001000000000*/
-        GF_CLI_STATUS_BRICK        = 0x000400,    /*00000010000000000*/
-        GF_CLI_STATUS_NFS          = 0x000800,    /*00000100000000000*/
-        GF_CLI_STATUS_SHD          = 0x001000,    /*00001000000000000*/
-        GF_CLI_STATUS_QUOTAD       = 0x002000,    /*00010000000000000*/
-        GF_CLI_STATUS_SNAPD        = 0x004000,    /*00100000000000000*/
-        GF_CLI_STATUS_BITD         = 0x008000,    /*01000000000000000*/
-        GF_CLI_STATUS_SCRUB        = 0x010000,    /*10000000000000000*/
-        GF_CLI_STATUS_TIERD        = 0x020000     /*100000000000000000*/
+        GF_CLI_STATUS_MEM          = 0x000001,    /*0000000000000000001*/
+        GF_CLI_STATUS_CLIENTS      = 0x000002,    /*0000000000000000010*/
+        GF_CLI_STATUS_INODE        = 0x000004,    /*0000000000000000100*/
+        GF_CLI_STATUS_FD           = 0x000008,    /*0000000000000001000*/
+        GF_CLI_STATUS_CALLPOOL     = 0x000010,    /*0000000000000010000*/
+        GF_CLI_STATUS_DETAIL       = 0x000020,    /*0000000000000100000*/
+        GF_CLI_STATUS_TASKS        = 0x000040,    /*0000000000001000000*/
+        GF_CLI_STATUS_MASK         = 0x0000FF,    /*0000000000011111111 Used to get the op*/
+        GF_CLI_STATUS_VOL          = 0x000100,    /*0000000000100000000*/
+        GF_CLI_STATUS_ALL          = 0x000200,    /*0000000001000000000*/
+        GF_CLI_STATUS_BRICK        = 0x000400,    /*0000000010000000000*/
+        GF_CLI_STATUS_NFS          = 0x000800,    /*0000000100000000000*/
+        GF_CLI_STATUS_SHD          = 0x001000,    /*0000001000000000000*/
+        GF_CLI_STATUS_QUOTAD       = 0x002000,    /*0000010000000000000*/
+        GF_CLI_STATUS_SNAPD        = 0x004000,    /*0000100000000000000*/
+        GF_CLI_STATUS_BITD         = 0x008000,    /*0001000000000000000*/
+        GF_CLI_STATUS_SCRUB        = 0x010000,    /*0010000000000000000*/
+        GF_CLI_STATUS_TIERD        = 0x020000,    /*0100000000000000000*/
+        GF_CLI_STATUS_VSCAND       = 0x040000     /*1000000000000000000*/
 };
 
 /* Identifiers for snapshot clis */
@@ -238,7 +246,7 @@ struct gf_cli_req {
         opaque  dict<>;
 };
 
- struct gf_cli_rsp {
+struct gf_cli_rsp {
         int     op_ret;
         int     op_errno;
         string  op_errstr<>;

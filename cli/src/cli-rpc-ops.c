@@ -11957,55 +11957,178 @@ out:
         return ret;
 }
 
+int
+gf_cli_vscan_cbk (struct rpc_req *req, struct iovec *iov,
+                   int count, void *myframe)
+{
+        int          ret    = -1;
+        int          type   = 0;
+        gf_cli_rsp   rsp    = {0, };
+        dict_t      *dict   = NULL;
+
+        GF_ASSERT (myframe);
+
+        if (req->rpc_status == -1) {
+                goto out;
+        }
+
+        ret = xdr_to_generic (*iov, &rsp, (xdrproc_t)xdr_gf_cli_rsp);
+        if (ret < 0) {
+                gf_log (((call_frame_t *) myframe)->this->name, GF_LOG_ERROR,
+                        "Failed to decode xdr response");
+                goto out;
+        }
+
+        if (rsp.op_ret) {
+                ret = -1;
+                if (global_state->mode & GLUSTER_MODE_XML)
+                        goto xml_output;
+
+                if (strcmp (rsp.op_errstr, ""))
+                        cli_err ("vscan command failed : %s", rsp.op_errstr);
+                else
+                        cli_err ("vscan command : failed");
+
+                goto out;
+        }
+
+        if (rsp.dict.dict_len) {
+                /* Unserialize the dictionary */
+                dict = dict_new ();
+
+                if (!dict) {
+                        ret = -1;
+                        goto out;
+                }
+
+                ret = dict_unserialize (rsp.dict.dict_val,
+                                        rsp.dict.dict_len,
+                                        &dict);
+
+                if (ret) {
+                        gf_log ("cli", GF_LOG_ERROR, "failed to unserialize "
+                                "req-buffer to dictionary");
+                        goto out;
+                }
+        }
+
+        gf_log ("cli", GF_LOG_DEBUG, "Received resp to vscan command");
+
+        ret = dict_get_int32 (dict, "type", &type);
+        if (ret) {
+                gf_log ("cli", GF_LOG_ERROR, "Failed to get command type");
+                goto out;
+        }
+
+xml_output:
+        if (global_state->mode & GLUSTER_MODE_XML) {
+                ret = cli_xml_output_vol_profile (dict, rsp.op_ret,
+                                                  rsp.op_errno,
+                                                  rsp.op_errstr);
+                if (ret)
+                        gf_log ("cli", GF_LOG_ERROR,
+                                "Error outputting to xml");
+                goto out;
+        }
+
+        if (!rsp.op_ret)
+                cli_out ("volume vscan: success");
+
+        ret = rsp.op_ret;
+
+out:
+        if (dict)
+            dict_unref (dict);
+
+        free (rsp.dict.dict_val);
+        free (rsp.op_errstr);
+
+        cli_cmd_broadcast_response (ret);
+
+        return ret;
+}
+
+int32_t
+gf_cli_vscan (call_frame_t *frame, xlator_t *this, void *data)
+{
+        gf_cli_req   req        = { {0,} };
+        dict_t      *options    = NULL;
+        int          ret        = -1;
+
+        if (!frame || !this || !data)
+                goto out;
+
+        options = data;
+
+        ret = cli_to_glusterd (&req, frame, gf_cli_vscan_cbk,
+                               (xdrproc_t) xdr_gf_cli_req, options,
+                               GLUSTER_CLI_VSCAN, this, cli_rpc_prog,
+                               NULL);
+
+        if (ret) {
+                gf_log ("cli", GF_LOG_ERROR, "cli_to_glusterd for "
+                        "vscan failed");
+                goto out;
+        }
+
+out:
+        gf_log ("cli", GF_LOG_DEBUG, "Returning %d", ret);
+
+        GF_FREE (req.dict.dict_val);
+
+        return ret;
+}
+
 struct rpc_clnt_procedure gluster_cli_actors[GLUSTER_CLI_MAXVALUE] = {
-        [GLUSTER_CLI_NULL]             = {"NULL", NULL },
-        [GLUSTER_CLI_PROBE]            = {"PROBE_QUERY", gf_cli_probe},
-        [GLUSTER_CLI_DEPROBE]          = {"DEPROBE_QUERY", gf_cli_deprobe},
-        [GLUSTER_CLI_LIST_FRIENDS]     = {"LIST_FRIENDS", gf_cli_list_friends},
-        [GLUSTER_CLI_UUID_RESET]       = {"UUID_RESET", gf_cli3_1_uuid_reset},
-        [GLUSTER_CLI_UUID_GET]         = {"UUID_GET", gf_cli3_1_uuid_get},
-        [GLUSTER_CLI_CREATE_VOLUME]    = {"CREATE_VOLUME", gf_cli_create_volume},
-        [GLUSTER_CLI_DELETE_VOLUME]    = {"DELETE_VOLUME", gf_cli_delete_volume},
-        [GLUSTER_CLI_START_VOLUME]     = {"START_VOLUME", gf_cli_start_volume},
-        [GLUSTER_CLI_STOP_VOLUME]      = {"STOP_VOLUME", gf_cli_stop_volume},
-        [GLUSTER_CLI_RENAME_VOLUME]    = {"RENAME_VOLUME", gf_cli_rename_volume},
-        [GLUSTER_CLI_DEFRAG_VOLUME]    = {"DEFRAG_VOLUME", gf_cli_defrag_volume},
-        [GLUSTER_CLI_GET_VOLUME]       = {"GET_VOLUME", gf_cli_get_volume},
-        [GLUSTER_CLI_GET_NEXT_VOLUME]  = {"GET_NEXT_VOLUME", gf_cli_get_next_volume},
-        [GLUSTER_CLI_SET_VOLUME]       = {"SET_VOLUME", gf_cli_set_volume},
-        [GLUSTER_CLI_ADD_BRICK]        = {"ADD_BRICK", gf_cli_add_brick},
-        [GLUSTER_CLI_REMOVE_BRICK]     = {"REMOVE_BRICK", gf_cli_remove_brick},
-        [GLUSTER_CLI_REPLACE_BRICK]    = {"REPLACE_BRICK", gf_cli_replace_brick},
-        [GLUSTER_CLI_LOG_ROTATE]       = {"LOG ROTATE", gf_cli_log_rotate},
-        [GLUSTER_CLI_GETSPEC]          = {"GETSPEC", gf_cli_getspec},
-        [GLUSTER_CLI_PMAP_PORTBYBRICK] = {"PMAP PORTBYBRICK", gf_cli_pmap_b2p},
-        [GLUSTER_CLI_SYNC_VOLUME]      = {"SYNC_VOLUME", gf_cli_sync_volume},
-        [GLUSTER_CLI_RESET_VOLUME]     = {"RESET_VOLUME", gf_cli_reset_volume},
-        [GLUSTER_CLI_FSM_LOG]          = {"FSM_LOG", gf_cli_fsm_log},
-        [GLUSTER_CLI_GSYNC_SET]        = {"GSYNC_SET", gf_cli_gsync_set},
-        [GLUSTER_CLI_PROFILE_VOLUME]   = {"PROFILE_VOLUME", gf_cli_profile_volume},
-        [GLUSTER_CLI_QUOTA]            = {"QUOTA", gf_cli_quota},
-        [GLUSTER_CLI_TOP_VOLUME]       = {"TOP_VOLUME", gf_cli_top_volume},
-        [GLUSTER_CLI_GETWD]            = {"GETWD", gf_cli_getwd},
-        [GLUSTER_CLI_STATUS_VOLUME]    = {"STATUS_VOLUME", gf_cli_status_volume},
-        [GLUSTER_CLI_STATUS_ALL]       = {"STATUS_ALL", gf_cli_status_volume_all},
-        [GLUSTER_CLI_MOUNT]            = {"MOUNT", gf_cli_mount},
-        [GLUSTER_CLI_UMOUNT]           = {"UMOUNT", gf_cli_umount},
-        [GLUSTER_CLI_HEAL_VOLUME]      = {"HEAL_VOLUME", gf_cli_heal_volume},
-        [GLUSTER_CLI_STATEDUMP_VOLUME] = {"STATEDUMP_VOLUME", gf_cli_statedump_volume},
-        [GLUSTER_CLI_LIST_VOLUME]      = {"LIST_VOLUME", gf_cli_list_volume},
-        [GLUSTER_CLI_CLRLOCKS_VOLUME]  = {"CLEARLOCKS_VOLUME", gf_cli_clearlocks_volume},
-        [GLUSTER_CLI_COPY_FILE]        = {"COPY_FILE", gf_cli_copy_file},
-        [GLUSTER_CLI_SYS_EXEC]         = {"SYS_EXEC", gf_cli_sys_exec},
-        [GLUSTER_CLI_SNAP]             = {"SNAP", gf_cli_snapshot},
-        [GLUSTER_CLI_BARRIER_VOLUME]   = {"BARRIER VOLUME", gf_cli_barrier_volume},
-        [GLUSTER_CLI_GANESHA]          = {"GANESHA", gf_cli_ganesha},
-        [GLUSTER_CLI_GET_VOL_OPT]      = {"GET_VOL_OPT", gf_cli_get_vol_opt},
-        [GLUSTER_CLI_BITROT]           = {"BITROT", gf_cli_bitrot},
-        [GLUSTER_CLI_ATTACH_TIER]      = {"ATTACH_TIER", gf_cli_attach_tier},
-        [GLUSTER_CLI_TIER]             = {"TIER", gf_cli_tier},
-        [GLUSTER_CLI_GET_STATE]        = {"GET_STATE", gf_cli_get_state},
-        [GLUSTER_CLI_RESET_BRICK]      = {"RESET_BRICK", gf_cli_reset_brick},
+        [GLUSTER_CLI_NULL]              = {"NULL", NULL },
+        [GLUSTER_CLI_PROBE]             = {"PROBE_QUERY", gf_cli_probe},
+        [GLUSTER_CLI_DEPROBE]           = {"DEPROBE_QUERY", gf_cli_deprobe},
+        [GLUSTER_CLI_LIST_FRIENDS]      = {"LIST_FRIENDS", gf_cli_list_friends},
+        [GLUSTER_CLI_UUID_RESET]        = {"UUID_RESET", gf_cli3_1_uuid_reset},
+        [GLUSTER_CLI_UUID_GET]          = {"UUID_GET", gf_cli3_1_uuid_get},
+        [GLUSTER_CLI_CREATE_VOLUME]     = {"CREATE_VOLUME", gf_cli_create_volume},
+        [GLUSTER_CLI_DELETE_VOLUME]     = {"DELETE_VOLUME", gf_cli_delete_volume},
+        [GLUSTER_CLI_START_VOLUME]      = {"START_VOLUME", gf_cli_start_volume},
+        [GLUSTER_CLI_STOP_VOLUME]       = {"STOP_VOLUME", gf_cli_stop_volume},
+        [GLUSTER_CLI_RENAME_VOLUME]     = {"RENAME_VOLUME", gf_cli_rename_volume},
+        [GLUSTER_CLI_DEFRAG_VOLUME]     = {"DEFRAG_VOLUME", gf_cli_defrag_volume},
+        [GLUSTER_CLI_GET_VOLUME]        = {"GET_VOLUME", gf_cli_get_volume},
+        [GLUSTER_CLI_GET_NEXT_VOLUME]   = {"GET_NEXT_VOLUME", gf_cli_get_next_volume},
+        [GLUSTER_CLI_SET_VOLUME]        = {"SET_VOLUME", gf_cli_set_volume},
+        [GLUSTER_CLI_ADD_BRICK]         = {"ADD_BRICK", gf_cli_add_brick},
+        [GLUSTER_CLI_REMOVE_BRICK]      = {"REMOVE_BRICK", gf_cli_remove_brick},
+        [GLUSTER_CLI_REPLACE_BRICK]     = {"REPLACE_BRICK", gf_cli_replace_brick},
+        [GLUSTER_CLI_LOG_ROTATE]        = {"LOG ROTATE", gf_cli_log_rotate},
+        [GLUSTER_CLI_GETSPEC]           = {"GETSPEC", gf_cli_getspec},
+        [GLUSTER_CLI_PMAP_PORTBYBRICK]  = {"PMAP PORTBYBRICK", gf_cli_pmap_b2p},
+        [GLUSTER_CLI_SYNC_VOLUME]       = {"SYNC_VOLUME", gf_cli_sync_volume},
+        [GLUSTER_CLI_RESET_VOLUME]      = {"RESET_VOLUME", gf_cli_reset_volume},
+        [GLUSTER_CLI_FSM_LOG]           = {"FSM_LOG", gf_cli_fsm_log},
+        [GLUSTER_CLI_GSYNC_SET]         = {"GSYNC_SET", gf_cli_gsync_set},
+        [GLUSTER_CLI_PROFILE_VOLUME]    = {"PROFILE_VOLUME", gf_cli_profile_volume},
+        [GLUSTER_CLI_QUOTA]             = {"QUOTA", gf_cli_quota},
+        [GLUSTER_CLI_TOP_VOLUME]        = {"TOP_VOLUME", gf_cli_top_volume},
+        [GLUSTER_CLI_GETWD]             = {"GETWD", gf_cli_getwd},
+        [GLUSTER_CLI_STATUS_VOLUME]     = {"STATUS_VOLUME", gf_cli_status_volume},
+        [GLUSTER_CLI_STATUS_ALL]        = {"STATUS_ALL", gf_cli_status_volume_all},
+        [GLUSTER_CLI_MOUNT]             = {"MOUNT", gf_cli_mount},
+        [GLUSTER_CLI_UMOUNT]            = {"UMOUNT", gf_cli_umount},
+        [GLUSTER_CLI_HEAL_VOLUME]       = {"HEAL_VOLUME", gf_cli_heal_volume},
+        [GLUSTER_CLI_STATEDUMP_VOLUME]  = {"STATEDUMP_VOLUME", gf_cli_statedump_volume},
+        [GLUSTER_CLI_LIST_VOLUME]       = {"LIST_VOLUME", gf_cli_list_volume},
+        [GLUSTER_CLI_CLRLOCKS_VOLUME]   = {"CLEARLOCKS_VOLUME", gf_cli_clearlocks_volume},
+        [GLUSTER_CLI_COPY_FILE]         = {"COPY_FILE", gf_cli_copy_file},
+        [GLUSTER_CLI_SYS_EXEC]          = {"SYS_EXEC", gf_cli_sys_exec},
+        [GLUSTER_CLI_SNAP]              = {"SNAP", gf_cli_snapshot},
+        [GLUSTER_CLI_BARRIER_VOLUME]    = {"BARRIER VOLUME", gf_cli_barrier_volume},
+        [GLUSTER_CLI_GANESHA]           = {"GANESHA", gf_cli_ganesha},
+        [GLUSTER_CLI_GET_VOL_OPT]       = {"GET_VOL_OPT", gf_cli_get_vol_opt},
+        [GLUSTER_CLI_BITROT]            = {"BITROT", gf_cli_bitrot},
+        [GLUSTER_CLI_ATTACH_TIER]       = {"ATTACH_TIER", gf_cli_attach_tier},
+        [GLUSTER_CLI_TIER]              = {"TIER", gf_cli_tier},
+        [GLUSTER_CLI_VSCAN]             = {"VSCAN", gf_cli_vscan},
+        [GLUSTER_CLI_GET_STATE]         = {"GET_STATE", gf_cli_get_state},
+        [GLUSTER_CLI_RESET_BRICK]       = {"RESET_BRICK", gf_cli_reset_brick},
         [GLUSTER_CLI_REMOVE_TIER_BRICK] = {"DETACH_TIER", gf_cli_remove_tier_brick}
 };
 
@@ -12020,7 +12143,7 @@ struct rpc_clnt_program cli_prog = {
 struct rpc_clnt_procedure cli_quotad_procs[GF_AGGREGATOR_MAXVALUE] = {
         [GF_AGGREGATOR_NULL]     = {"NULL", NULL},
         [GF_AGGREGATOR_LOOKUP]   = {"LOOKUP", NULL},
-        [GF_AGGREGATOR_GETLIMIT]   = {"GETLIMIT", cli_quotad_getlimit},
+        [GF_AGGREGATOR_GETLIMIT] = {"GETLIMIT", cli_quotad_getlimit},
 };
 
 struct rpc_clnt_program cli_quotad_clnt = {
